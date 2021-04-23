@@ -27,6 +27,9 @@ var app = (function () {
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
     }
+    function null_to_empty(value) {
+        return value == null ? '' : value;
+    }
 
     function append(target, node) {
         target.appendChild(node);
@@ -50,11 +53,29 @@ var app = (function () {
         node.addEventListener(event, handler, options);
         return () => node.removeEventListener(event, handler, options);
     }
+    function prevent_default(fn) {
+        return function (event) {
+            event.preventDefault();
+            // @ts-ignore
+            return fn.call(this, event);
+        };
+    }
     function attr(node, attribute, value) {
         if (value == null)
             node.removeAttribute(attribute);
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
+    }
+    function get_binding_group_value(group, __value, checked) {
+        const value = new Set();
+        for (let i = 0; i < group.length; i += 1) {
+            if (group[i].checked)
+                value.add(group[i].__value);
+        }
+        if (!checked) {
+            value.delete(__value);
+        }
+        return Array.from(value);
     }
     function to_number(value) {
         return value === '' ? null : +value;
@@ -65,6 +86,19 @@ var app = (function () {
     function set_input_value(input, value) {
         input.value = value == null ? '' : value;
     }
+    function select_option(select, value) {
+        for (let i = 0; i < select.options.length; i += 1) {
+            const option = select.options[i];
+            if (option.__value === value) {
+                option.selected = true;
+                return;
+            }
+        }
+    }
+    function select_value(select) {
+        const selected_option = select.querySelector(':checked') || select.options[0];
+        return selected_option && selected_option.__value;
+    }
     function custom_event(type, detail) {
         const e = document.createEvent('CustomEvent');
         e.initCustomEvent(type, false, false, detail);
@@ -74,6 +108,15 @@ var app = (function () {
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    // TODO figure out if we still want to support
+    // shorthand events, or if we want to implement
+    // a real bubbling mechanism
+    function bubble(component, event) {
+        const callbacks = component.$$.callbacks[event.type];
+        if (callbacks) {
+            callbacks.slice().forEach(fn => fn(event));
+        }
     }
 
     const dirty_components = [];
@@ -386,7 +429,7 @@ var app = (function () {
     		c: function create() {
     			input = element("input");
     			attr_dev(input, "type", "text");
-    			add_location(input, file$2, 5, 0, 66);
+    			add_location(input, file$2, 9, 0, 125);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -396,7 +439,7 @@ var app = (function () {
     			set_input_value(input, /*val*/ ctx[0]);
 
     			if (!mounted) {
-    				dispose = listen_dev(input, "input", /*input_input_handler*/ ctx[2]);
+    				dispose = listen_dev(input, "input", /*input_input_handler*/ ctx[3]);
     				mounted = true;
     			}
     		},
@@ -430,6 +473,11 @@ var app = (function () {
     	validate_slots("CustomInput", slots, []);
     	let { val } = $$props;
     	let { type } = $$props;
+
+    	function empty() {
+    		$$invalidate(0, val = "");
+    	}
+
     	const writable_props = ["val", "type"];
 
     	Object.keys($$props).forEach(key => {
@@ -446,7 +494,7 @@ var app = (function () {
     		if ("type" in $$props) $$invalidate(1, type = $$props.type);
     	};
 
-    	$$self.$capture_state = () => ({ val, type });
+    	$$self.$capture_state = () => ({ val, type, empty });
 
     	$$self.$inject_state = $$props => {
     		if ("val" in $$props) $$invalidate(0, val = $$props.val);
@@ -457,13 +505,13 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [val, type, input_input_handler];
+    	return [val, type, empty, input_input_handler];
     }
 
     class CustomInput extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { val: 0, type: 1 });
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { val: 0, type: 1, empty: 2 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -497,6 +545,14 @@ var app = (function () {
     	}
 
     	set type(value) {
+    		throw new Error("<CustomInput>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get empty() {
+    		return this.$$.ctx[2];
+    	}
+
+    	set empty(value) {
     		throw new Error("<CustomInput>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
     }
@@ -630,6 +686,10 @@ var app = (function () {
     	}
     }
 
+    function validation(val) {
+        return val.includes('@');
+    }
+
     /* src\App.svelte generated by Svelte v3.37.0 */
 
     const { console: console_1 } = globals;
@@ -642,13 +702,50 @@ var app = (function () {
     	let toggle;
     	let updating_chosenOption;
     	let t1;
-    	let input;
+    	let input0;
+    	let t2;
+    	let h1;
+    	let t4;
+    	let label0;
+    	let input1;
+    	let t5;
+    	let t6;
+    	let label1;
+    	let input2;
+    	let t7;
+    	let t8;
+    	let label2;
+    	let input3;
+    	let t9;
+    	let t10;
+    	let select;
+    	let option0;
+    	let option1;
+    	let option2;
+    	let t14;
+    	let hr0;
+    	let t15;
+    	let input4;
+    	let t16;
+    	let button0;
+    	let t18;
+    	let div;
+    	let t19;
+    	let hr1;
+    	let t20;
+    	let form;
+    	let input5;
+    	let input5_class_value;
+    	let t21;
+    	let button1;
+    	let t22;
+    	let button1_disabled_value;
     	let current;
     	let mounted;
     	let dispose;
 
     	function custominput_val_binding(value) {
-    		/*custominput_val_binding*/ ctx[3](value);
+    		/*custominput_val_binding*/ ctx[12](value);
     	}
 
     	let custominput_props = { type: "text" };
@@ -659,9 +756,10 @@ var app = (function () {
 
     	custominput = new CustomInput({ props: custominput_props, $$inline: true });
     	binding_callbacks.push(() => bind(custominput, "val", custominput_val_binding));
+    	/*custominput_binding*/ ctx[13](custominput);
 
     	function toggle_chosenOption_binding(value) {
-    		/*toggle_chosenOption_binding*/ ctx[4](value);
+    		/*toggle_chosenOption_binding*/ ctx[14](value);
     	}
 
     	let toggle_props = {};
@@ -679,9 +777,95 @@ var app = (function () {
     			t0 = space();
     			create_component(toggle.$$.fragment);
     			t1 = space();
-    			input = element("input");
-    			attr_dev(input, "type", "number");
-    			add_location(input, file, 22, 0, 478);
+    			input0 = element("input");
+    			t2 = space();
+    			h1 = element("h1");
+    			h1.textContent = "What is your favorite color?";
+    			t4 = space();
+    			label0 = element("label");
+    			input1 = element("input");
+    			t5 = text("\r\n    Red");
+    			t6 = space();
+    			label1 = element("label");
+    			input2 = element("input");
+    			t7 = text("\r\n    Green");
+    			t8 = space();
+    			label2 = element("label");
+    			input3 = element("input");
+    			t9 = text("\r\n    Blue");
+    			t10 = space();
+    			select = element("select");
+    			option0 = element("option");
+    			option0.textContent = "Green";
+    			option1 = element("option");
+    			option1.textContent = "Red";
+    			option2 = element("option");
+    			option2.textContent = "Blue";
+    			t14 = space();
+    			hr0 = element("hr");
+    			t15 = space();
+    			input4 = element("input");
+    			t16 = space();
+    			button0 = element("button");
+    			button0.textContent = "Save";
+    			t18 = space();
+    			div = element("div");
+    			t19 = space();
+    			hr1 = element("hr");
+    			t20 = space();
+    			form = element("form");
+    			input5 = element("input");
+    			t21 = space();
+    			button1 = element("button");
+    			t22 = text("Save");
+    			attr_dev(input0, "type", "number");
+    			add_location(input0, file, 56, 0, 1354);
+    			add_location(h1, file, 57, 0, 1396);
+    			attr_dev(input1, "type", "checkbox");
+    			attr_dev(input1, "name", "colors");
+    			input1.__value = "Red";
+    			input1.value = input1.__value;
+    			/*$$binding_groups*/ ctx[17][0].push(input1);
+    			add_location(input1, file, 64, 4, 1547);
+    			add_location(label0, file, 63, 0, 1534);
+    			attr_dev(input2, "type", "checkbox");
+    			attr_dev(input2, "name", "colors");
+    			input2.__value = "Green";
+    			input2.value = input2.__value;
+    			/*$$binding_groups*/ ctx[17][0].push(input2);
+    			add_location(input2, file, 68, 4, 1652);
+    			add_location(label1, file, 67, 0, 1639);
+    			attr_dev(input3, "type", "checkbox");
+    			attr_dev(input3, "name", "colors");
+    			input3.__value = "Blue";
+    			input3.value = input3.__value;
+    			/*$$binding_groups*/ ctx[17][0].push(input3);
+    			add_location(input3, file, 72, 4, 1761);
+    			add_location(label2, file, 71, 0, 1748);
+    			option0.__value = "green";
+    			option0.value = option0.__value;
+    			add_location(option0, file, 77, 4, 1899);
+    			option1.__value = "red";
+    			option1.value = option1.__value;
+    			add_location(option1, file, 78, 4, 1941);
+    			option2.__value = "blue";
+    			option2.value = option2.__value;
+    			add_location(option2, file, 79, 4, 1979);
+    			if (/*singleFavColor*/ ctx[4] === void 0) add_render_callback(() => /*select_change_handler*/ ctx[20].call(select));
+    			add_location(select, file, 76, 0, 1857);
+    			add_location(hr0, file, 82, 0, 2028);
+    			attr_dev(input4, "type", "text");
+    			add_location(input4, file, 84, 0, 2036);
+    			add_location(button0, file, 85, 0, 2083);
+    			add_location(div, file, 87, 0, 2130);
+    			add_location(hr1, file, 89, 0, 2165);
+    			attr_dev(input5, "type", "email");
+    			attr_dev(input5, "class", input5_class_value = "" + (null_to_empty(/*isValid*/ ctx[9] ? "" : "invalid") + " svelte-t0g050"));
+    			add_location(input5, file, 92, 4, 2210);
+    			attr_dev(button1, "type", "submit");
+    			button1.disabled = button1_disabled_value = !/*isValid*/ ctx[9];
+    			add_location(button1, file, 93, 4, 2295);
+    			add_location(form, file, 91, 0, 2173);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -691,12 +875,64 @@ var app = (function () {
     			insert_dev(target, t0, anchor);
     			mount_component(toggle, target, anchor);
     			insert_dev(target, t1, anchor);
-    			insert_dev(target, input, anchor);
-    			set_input_value(input, /*price*/ ctx[2]);
+    			insert_dev(target, input0, anchor);
+    			set_input_value(input0, /*price*/ ctx[2]);
+    			insert_dev(target, t2, anchor);
+    			insert_dev(target, h1, anchor);
+    			insert_dev(target, t4, anchor);
+    			insert_dev(target, label0, anchor);
+    			append_dev(label0, input1);
+    			input1.checked = ~/*favColor*/ ctx[3].indexOf(input1.__value);
+    			append_dev(label0, t5);
+    			insert_dev(target, t6, anchor);
+    			insert_dev(target, label1, anchor);
+    			append_dev(label1, input2);
+    			input2.checked = ~/*favColor*/ ctx[3].indexOf(input2.__value);
+    			append_dev(label1, t7);
+    			insert_dev(target, t8, anchor);
+    			insert_dev(target, label2, anchor);
+    			append_dev(label2, input3);
+    			input3.checked = ~/*favColor*/ ctx[3].indexOf(input3.__value);
+    			append_dev(label2, t9);
+    			insert_dev(target, t10, anchor);
+    			insert_dev(target, select, anchor);
+    			append_dev(select, option0);
+    			append_dev(select, option1);
+    			append_dev(select, option2);
+    			select_option(select, /*singleFavColor*/ ctx[4]);
+    			insert_dev(target, t14, anchor);
+    			insert_dev(target, hr0, anchor);
+    			insert_dev(target, t15, anchor);
+    			insert_dev(target, input4, anchor);
+    			/*input4_binding*/ ctx[21](input4);
+    			insert_dev(target, t16, anchor);
+    			insert_dev(target, button0, anchor);
+    			insert_dev(target, t18, anchor);
+    			insert_dev(target, div, anchor);
+    			/*div_binding*/ ctx[22](div);
+    			insert_dev(target, t19, anchor);
+    			insert_dev(target, hr1, anchor);
+    			insert_dev(target, t20, anchor);
+    			insert_dev(target, form, anchor);
+    			append_dev(form, input5);
+    			set_input_value(input5, /*enteredEmail*/ ctx[6]);
+    			append_dev(form, t21);
+    			append_dev(form, button1);
+    			append_dev(button1, t22);
     			current = true;
 
     			if (!mounted) {
-    				dispose = listen_dev(input, "input", /*input_input_handler*/ ctx[5]);
+    				dispose = [
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[15]),
+    					listen_dev(input1, "change", /*input1_change_handler*/ ctx[16]),
+    					listen_dev(input2, "change", /*input2_change_handler*/ ctx[18]),
+    					listen_dev(input3, "change", /*input3_change_handler*/ ctx[19]),
+    					listen_dev(select, "change", /*select_change_handler*/ ctx[20]),
+    					listen_dev(button0, "click", /*saveData*/ ctx[10], false, false, false),
+    					listen_dev(input5, "input", /*input5_input_handler*/ ctx[23]),
+    					listen_dev(form, "submit", prevent_default(/*submit_handler*/ ctx[11]), false, true, false)
+    				];
+
     				mounted = true;
     			}
     		},
@@ -720,8 +956,36 @@ var app = (function () {
 
     			toggle.$set(toggle_changes);
 
-    			if (dirty & /*price*/ 4 && to_number(input.value) !== /*price*/ ctx[2]) {
-    				set_input_value(input, /*price*/ ctx[2]);
+    			if (dirty & /*price*/ 4 && to_number(input0.value) !== /*price*/ ctx[2]) {
+    				set_input_value(input0, /*price*/ ctx[2]);
+    			}
+
+    			if (dirty & /*favColor*/ 8) {
+    				input1.checked = ~/*favColor*/ ctx[3].indexOf(input1.__value);
+    			}
+
+    			if (dirty & /*favColor*/ 8) {
+    				input2.checked = ~/*favColor*/ ctx[3].indexOf(input2.__value);
+    			}
+
+    			if (dirty & /*favColor*/ 8) {
+    				input3.checked = ~/*favColor*/ ctx[3].indexOf(input3.__value);
+    			}
+
+    			if (dirty & /*singleFavColor*/ 16) {
+    				select_option(select, /*singleFavColor*/ ctx[4]);
+    			}
+
+    			if (!current || dirty & /*isValid*/ 512 && input5_class_value !== (input5_class_value = "" + (null_to_empty(/*isValid*/ ctx[9] ? "" : "invalid") + " svelte-t0g050"))) {
+    				attr_dev(input5, "class", input5_class_value);
+    			}
+
+    			if (dirty & /*enteredEmail*/ 64 && input5.value !== /*enteredEmail*/ ctx[6]) {
+    				set_input_value(input5, /*enteredEmail*/ ctx[6]);
+    			}
+
+    			if (!current || dirty & /*isValid*/ 512 && button1_disabled_value !== (button1_disabled_value = !/*isValid*/ ctx[9])) {
+    				prop_dev(button1, "disabled", button1_disabled_value);
     			}
     		},
     		i: function intro(local) {
@@ -736,13 +1000,41 @@ var app = (function () {
     			current = false;
     		},
     		d: function destroy(detaching) {
+    			/*custominput_binding*/ ctx[13](null);
     			destroy_component(custominput, detaching);
     			if (detaching) detach_dev(t0);
     			destroy_component(toggle, detaching);
     			if (detaching) detach_dev(t1);
-    			if (detaching) detach_dev(input);
+    			if (detaching) detach_dev(input0);
+    			if (detaching) detach_dev(t2);
+    			if (detaching) detach_dev(h1);
+    			if (detaching) detach_dev(t4);
+    			if (detaching) detach_dev(label0);
+    			/*$$binding_groups*/ ctx[17][0].splice(/*$$binding_groups*/ ctx[17][0].indexOf(input1), 1);
+    			if (detaching) detach_dev(t6);
+    			if (detaching) detach_dev(label1);
+    			/*$$binding_groups*/ ctx[17][0].splice(/*$$binding_groups*/ ctx[17][0].indexOf(input2), 1);
+    			if (detaching) detach_dev(t8);
+    			if (detaching) detach_dev(label2);
+    			/*$$binding_groups*/ ctx[17][0].splice(/*$$binding_groups*/ ctx[17][0].indexOf(input3), 1);
+    			if (detaching) detach_dev(t10);
+    			if (detaching) detach_dev(select);
+    			if (detaching) detach_dev(t14);
+    			if (detaching) detach_dev(hr0);
+    			if (detaching) detach_dev(t15);
+    			if (detaching) detach_dev(input4);
+    			/*input4_binding*/ ctx[21](null);
+    			if (detaching) detach_dev(t16);
+    			if (detaching) detach_dev(button0);
+    			if (detaching) detach_dev(t18);
+    			if (detaching) detach_dev(div);
+    			/*div_binding*/ ctx[22](null);
+    			if (detaching) detach_dev(t19);
+    			if (detaching) detach_dev(hr1);
+    			if (detaching) detach_dev(t20);
+    			if (detaching) detach_dev(form);
     			mounted = false;
-    			dispose();
+    			run_all(dispose);
     		}
     	};
 
@@ -763,9 +1055,26 @@ var app = (function () {
     	let val = "Max";
     	let selectedOption = 1;
     	let price;
+    	let agree = false;
+    	let favColor = ["Green"];
+    	let singleFavColor = "red";
+    	let usernameInput;
+    	let someDiv;
+    	let customInput;
+    	let enteredEmail = "";
+    	let isValid = false;
 
     	const changeValue = evt => {
     		$$invalidate(0, val = evt.target.value);
+    	};
+
+    	const saveData = () => {
+    		// console.log(document.querySelector("#username").value);
+    		// console.log(usernameInput.value);
+    		// console.dir(usernameInput);
+    		console.dir(someDiv);
+
+    		customInput.empty();
     	};
 
     	const writable_props = [];
@@ -774,9 +1083,22 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
+    	const $$binding_groups = [[]];
+
+    	function submit_handler(event) {
+    		bubble($$self, event);
+    	}
+
     	function custominput_val_binding(value) {
     		val = value;
     		$$invalidate(0, val);
+    	}
+
+    	function custominput_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			customInput = $$value;
+    			$$invalidate(5, customInput);
+    		});
     	}
 
     	function toggle_chosenOption_binding(value) {
@@ -784,24 +1106,81 @@ var app = (function () {
     		$$invalidate(1, selectedOption);
     	}
 
-    	function input_input_handler() {
+    	function input0_input_handler() {
     		price = to_number(this.value);
     		$$invalidate(2, price);
+    	}
+
+    	function input1_change_handler() {
+    		favColor = get_binding_group_value($$binding_groups[0], this.__value, this.checked);
+    		$$invalidate(3, favColor);
+    	}
+
+    	function input2_change_handler() {
+    		favColor = get_binding_group_value($$binding_groups[0], this.__value, this.checked);
+    		$$invalidate(3, favColor);
+    	}
+
+    	function input3_change_handler() {
+    		favColor = get_binding_group_value($$binding_groups[0], this.__value, this.checked);
+    		$$invalidate(3, favColor);
+    	}
+
+    	function select_change_handler() {
+    		singleFavColor = select_value(this);
+    		$$invalidate(4, singleFavColor);
+    	}
+
+    	function input4_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			usernameInput = $$value;
+    			$$invalidate(7, usernameInput);
+    		});
+    	}
+
+    	function div_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			someDiv = $$value;
+    			$$invalidate(8, someDiv);
+    		});
+    	}
+
+    	function input5_input_handler() {
+    		enteredEmail = this.value;
+    		$$invalidate(6, enteredEmail);
     	}
 
     	$$self.$capture_state = () => ({
     		CustomInput,
     		Toggle,
+    		validation,
     		val,
     		selectedOption,
     		price,
-    		changeValue
+    		agree,
+    		favColor,
+    		singleFavColor,
+    		usernameInput,
+    		someDiv,
+    		customInput,
+    		enteredEmail,
+    		isValid,
+    		changeValue,
+    		saveData
     	});
 
     	$$self.$inject_state = $$props => {
     		if ("val" in $$props) $$invalidate(0, val = $$props.val);
     		if ("selectedOption" in $$props) $$invalidate(1, selectedOption = $$props.selectedOption);
     		if ("price" in $$props) $$invalidate(2, price = $$props.price);
+    		if ("agree" in $$props) $$invalidate(24, agree = $$props.agree);
+    		if ("favColor" in $$props) $$invalidate(3, favColor = $$props.favColor);
+    		if ("singleFavColor" in $$props) $$invalidate(4, singleFavColor = $$props.singleFavColor);
+    		if ("usernameInput" in $$props) $$invalidate(7, usernameInput = $$props.usernameInput);
+    		if ("someDiv" in $$props) $$invalidate(8, someDiv = $$props.someDiv);
+    		if ("customInput" in $$props) $$invalidate(5, customInput = $$props.customInput);
+    		if ("enteredEmail" in $$props) $$invalidate(6, enteredEmail = $$props.enteredEmail);
+    		if ("isValid" in $$props) $$invalidate(9, isValid = $$props.isValid);
     	};
 
     	if ($$props && "$$inject" in $$props) {
@@ -820,15 +1199,55 @@ var app = (function () {
     		if ($$self.$$.dirty & /*price*/ 4) {
     			console.log(price);
     		}
+
+    		if ($$self.$$.dirty & /*favColor*/ 8) {
+    			console.log(favColor);
+    		}
+
+    		if ($$self.$$.dirty & /*singleFavColor*/ 16) {
+    			console.log(singleFavColor);
+    		}
+
+    		if ($$self.$$.dirty & /*customInput*/ 32) {
+    			console.log(customInput);
+    		}
+
+    		if ($$self.$$.dirty & /*enteredEmail*/ 64) {
+    			if (validation(enteredEmail)) {
+    				$$invalidate(9, isValid = true);
+    			} else {
+    				$$invalidate(9, isValid = false);
+    			}
+    		}
     	};
+
+    	console.log(agree);
 
     	return [
     		val,
     		selectedOption,
     		price,
+    		favColor,
+    		singleFavColor,
+    		customInput,
+    		enteredEmail,
+    		usernameInput,
+    		someDiv,
+    		isValid,
+    		saveData,
+    		submit_handler,
     		custominput_val_binding,
+    		custominput_binding,
     		toggle_chosenOption_binding,
-    		input_input_handler
+    		input0_input_handler,
+    		input1_change_handler,
+    		$$binding_groups,
+    		input2_change_handler,
+    		input3_change_handler,
+    		select_change_handler,
+    		input4_binding,
+    		div_binding,
+    		input5_input_handler
     	];
     }
 
